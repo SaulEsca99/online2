@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Mapa Rutas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .info { color: #17a2b8; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        select {
+            width: 100%;
+            padding: 8px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test del Sistema de Mapas y Rutas</h1>
+    
+    <div class="test-section">
+        <h2>1. Prueba de API buscar_lugares.php</h2>
+        <button onclick="testBuscarLugares()">Probar API</button>
+        <div id="resultado-lugares"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. Prueba de Carga de Selectores</h2>
+        <button onclick="testCargarSelectores()">Cargar Lugares en Selectores</button>
+        <div>
+            <label>Origen:</label>
+            <select id="test-origen">
+                <option value="">Selecciona origen...</option>
+            </select>
+            <label>Destino:</label>
+            <select id="test-destino">
+                <option value="">Selecciona destino...</option>
+            </select>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. Prueba de Cálculo de Ruta</h2>
+        <button onclick="testCalcularRuta()">Calcular Ruta de Prueba</button>
+        <div id="resultado-ruta"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. Diagnóstico Completo</h2>
+        <button onclick="diagnosticoCompleto()">Ejecutar Diagnóstico</button>
+        <div id="diagnostico"></div>
+    </div>
+
+    <script>
+        const API_URL = 'https://upiitascholar.com';
+        
+        async function testBuscarLugares() {
+            const div = document.getElementById('resultado-lugares');
+            div.innerHTML = '<p class="info">Probando API...</p>';
+            
+            try {
+                const response = await fetch(`${API_URL}/api/buscar_lugares.php`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    let html = '<p class="success">✅ API funcionando correctamente</p>';
+                    html += `<p>Edificios encontrados: ${data.data.length}</p>`;
+                    html += '<details><summary>Ver datos completos</summary>';
+                    html += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                    html += '</details>';
+                    div.innerHTML = html;
+                } else {
+                    div.innerHTML = `<p class="error">❌ Error: ${data.error}</p>`;
+                }
+            } catch (error) {
+                div.innerHTML = `<p class="error">❌ Error de conexión: ${error.message}</p>`;
+            }
+        }
+        
+        async function testCargarSelectores() {
+            try {
+                const response = await fetch(`${API_URL}/api/buscar_lugares.php`);
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    const origen = document.getElementById('test-origen');
+                    const destino = document.getElementById('test-destino');
+                    
+                    origen.innerHTML = '<option value="">Selecciona origen...</option>';
+                    destino.innerHTML = '<option value="">Selecciona destino...</option>';
+                    
+                    data.data.forEach(edificio => {
+                        const optgroupO = document.createElement('optgroup');
+                        optgroupO.label = edificio.edificio;
+                        
+                        const optgroupD = document.createElement('optgroup');
+                        optgroupD.label = edificio.edificio;
+                        
+                        edificio.lugares.forEach(lugar => {
+                            const option = document.createElement('option');
+                            option.value = lugar.valor_completo;
+                            option.textContent = `${lugar.codigo} - ${lugar.nombre}`;
+                            
+                            optgroupO.appendChild(option.cloneNode(true));
+                            optgroupD.appendChild(option.cloneNode(true));
+                        });
+                        
+                        origen.appendChild(optgroupO);
+                        destino.appendChild(optgroupD);
+                    });
+                    
+                    alert('✅ Selectores cargados correctamente');
+                }
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            }
+        }
+        
+        async function testCalcularRuta() {
+            const div = document.getElementById('resultado-ruta');
+            div.innerHTML = '<p class="info">Calculando ruta de prueba...</p>';
+            
+            try {
+                // Usar valores de ejemplo
+                const payload = {
+                    origen_tipo: 'aula',
+                    origen_id: 1,  // A-100
+                    destino_tipo: 'aula',
+                    destino_id: 126  // EG-001
+                };
+                
+                const response = await fetch(`${API_URL}/api/calcular_ruta.php`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    let html = '<p class="success">✅ Ruta calculada correctamente</p>';
+                    html += `<p>Distancia: ${data.ruta.distancia_total.toFixed(1)} metros</p>`;
+                    html += `<p>Pasos en la ruta: ${data.ruta.ruta_detallada.length}</p>`;
+                    html += '<details><summary>Ver ruta completa</summary>';
+                    html += `<pre>${JSON.stringify(data.ruta, null, 2)}</pre>`;
+                    html += '</details>';
+                    div.innerHTML = html;
+                } else {
+                    div.innerHTML = `<p class="error">❌ Error: ${data.error}</p>`;
+                }
+            } catch (error) {
+                div.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+            }
+        }
+        
+        async function diagnosticoCompleto() {
+            const div = document.getElementById('diagnostico');
+            div.innerHTML = '<p class="info">Ejecutando diagnóstico...</p>';
+            
+            let resultado = '<h3>Resultado del Diagnóstico:</h3>';
+            
+            // Test 1: API buscar_lugares
+            try {
+                const r1 = await fetch(`${API_URL}/api/buscar_lugares.php`);
+                const d1 = await r1.json();
+                if (d1.success) {
+                    resultado += '<p class="success">✅ API buscar_lugares.php funcionando</p>';
+                } else {
+                    resultado += '<p class="error">❌ API buscar_lugares.php con errores</p>';
+                }
+            } catch (e) {
+                resultado += '<p class="error">❌ API buscar_lugares.php no responde</p>';
+            }
+            
+            // Test 2: API calcular_ruta
+            try {
+                const r2 = await fetch(`${API_URL}/api/calcular_ruta.php`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        origen_tipo: 'aula',
+                        origen_id: 1,
+                        destino_tipo: 'aula',
+                        destino_id: 2
+                    })
+                });
+                const d2 = await r2.json();
+                if (d2.success || d2.error) {
+                    resultado += '<p class="success">✅ API calcular_ruta.php respondiendo</p>';
+                }
+            } catch (e) {
+                resultado += '<p class="error">❌ API calcular_ruta.php no responde</p>';
+            }
+            
+            // Test 3: API mapa_coordenadas
+            try {
+                const r3 = await fetch(`${API_URL}/api/mapa_coordenadas.php`);
+                const d3 = await r3.json();
+                if (d3.success) {
+                    resultado += '<p class="success">✅ API mapa_coordenadas.php funcionando</p>';
+                } else {
+                    resultado += '<p class="error">❌ API mapa_coordenadas.php con errores</p>';
+                }
+            } catch (e) {
+                resultado += '<p class="error">❌ API mapa_coordenadas.php no responde</p>';
+            }
+            
+            // Test 4: Archivos principales
+            const archivos = [
+                'pages/mapa-rutas.php',
+                'css/styles.css',
+                'js/main.js'
+            ];
+            
+            resultado += '<h4>Archivos del sistema:</h4>';
+            for (const archivo of archivos) {
+                try {
+                    const r = await fetch(`${API_URL}/${archivo}`, {method: 'HEAD'});
+                    if (r.ok) {
+                        resultado += `<p class="success">✅ ${archivo} existe</p>`;
+                    } else {
+                        resultado += `<p class="error">❌ ${archivo} no encontrado</p>`;
+                    }
+                } catch (e) {
+                    resultado += `<p class="error">❌ ${archivo} error al verificar</p>`;
+                }
+            }
+            
+            div.innerHTML = resultado;
+        }
+    </script>
+</body>
+</html>
